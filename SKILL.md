@@ -23,10 +23,16 @@ Skip delegation when the task is a tiny targeted edit and the relevant file is a
 
 1. State briefly that you are using explorer subagents for the reconnaissance pass.
 2. Identify independent research slices. Prefer 2-4 slices when the codebase is broad.
-3. Spawn explorer subagents when the environment supports subagents and policy allows it. Give each subagent a narrow, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
+3. Spawn explorer subagents when the environment supports subagents and policy allows it. Codex supports independent subagents, so this is the default path for broad reconnaissance. Give each subagent a narrow, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
 4. While subagents run, do not read code from the target codebase in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
 5. Collect the explorer outputs and synthesize the result before reading large files yourself.
 6. Produce a key-files table, then use it as the reading map for the next step.
+
+Default responsibility split:
+
+- Main agent: decide whether `$explore` applies, split the task, spawn explorers, wait for summaries, synthesize findings, and perform only the smallest necessary local verification before editing.
+- Explorer subagents: perform read-only search and file inspection within their assigned slice, identify active and inactive paths when possible, and return concise evidence-backed summaries.
+- Fallback local pass: only used when subagents are unavailable or blocked by policy.
 
 ## Explorer Prompt Template
 
@@ -67,6 +73,12 @@ Split by natural boundaries:
 
 Avoid vague prompts such as "explore everything." A good explorer task has a scope, a question, and a requested output shape.
 
+Concrete slicing examples:
+
+- Authentication bug: split into `request entry points and middleware`, `session/token domain logic`, and `tests plus fixtures`. Ask each explorer to find active code paths, relevant symbols, and existing error handling conventions.
+- Data persistence refactor: split into `models and schema`, `repository/query layer`, `background jobs or integrations`, and `tests/migrations/config`. Ask each explorer to identify ownership boundaries and compatibility risks.
+- Frontend feature change: split into `route/page entry points`, `state/data fetching`, `component library patterns`, and `tests/storybook/docs` when those areas are independent.
+
 ## Required Synthesis
 
 After subagents finish, summarize the useful findings and include this table before making broad reads or edits:
@@ -92,9 +104,34 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 - Keep explorer prompts read-only unless the user explicitly asks for delegated edits and the environment allows them.
 - Use parallel explorers only when the slices are independent.
 - While explorer subagents are reading the target codebase, the main agent must not run local code searches, file reads, or structure scans against that same target.
-- If subagents are unavailable, perform the same workflow locally with `rg`, `rg --files`, and concise notes, then still produce the key-files table.
-- If explorer findings conflict, verify the smallest relevant set of files locally before editing.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
+
+## Fallback And Error Handling
+
+If subagents are unavailable:
+
+- Say that the runtime cannot spawn explorer subagents for this pass.
+- Perform a local read-only reconnaissance pass using focused commands such as `rg --files`, `rg '<symbol-or-term>'`, and targeted file reads.
+- Keep local notes concise and still produce the required key-files table before broad implementation reads.
+- Do not present the fallback as equivalent to isolated subagent exploration; it does not provide separate context windows.
+
+If an explorer returns empty or low-value results:
+
+- Check whether the prompt was too narrow, used the wrong terminology, or scoped the wrong directory.
+- Retry once with a broader but still bounded scope, adding concrete search terms, likely file patterns, or neighboring modules.
+- If the second pass is still empty, mark the area as `unclear` in the synthesis and verify the smallest plausible local path before editing.
+
+If explorer findings conflict:
+
+- Preserve both claims in the synthesis with their sources.
+- Verify the smallest relevant set of files locally before deciding which path is primary.
+- Label the outcome as `primary`, `legacy`, `experimental`, `generated`, `unused`, or `unclear` only when there is evidence such as route usage, imports, tests, docs, naming, or recent surrounding patterns.
+
+If an explorer returns large file dumps:
+
+- Ignore the bulk dump for synthesis unless a specific excerpt is necessary.
+- Ask for a concise retry when time permits.
+- Prefer evidence paths, symbol names, and line-oriented references over copied code.
 
 ## Design Notes
 
