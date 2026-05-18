@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Use when a coding task requires broad codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, or changes that may require reading roughly 10+ files or searching multiple independent areas. Delegates read-only exploration to explorer subagents first, keeps the main conversation lean, prevents the main agent from reading code while subagents are exploring, and requires a key-files table before the main agent proceeds with detailed code reading or edits.
+description: Use when a coding task requires complex codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. Delegates read-only exploration to explorer subagents first, keeps the main conversation lean, prevents the main agent from reading code while subagents are exploring, and requires a key-files table before the main agent proceeds with detailed code reading or edits.
 ---
 
 # Explore
@@ -13,11 +13,19 @@ Use this skill when any of these signals appear:
 
 - The task is in an unfamiliar repository or subsystem.
 - The task likely needs reading about 10 or more files.
+- The task only touches a few files, but those files are large, dense, or central to core business behavior.
 - The task spans multiple independent areas, such as API, database, UI, tests, docs, or build tooling.
 - The user asks for architecture understanding, feature tracing, refactoring, migration, bug root-cause analysis, or broad review.
 - You need a fresh, read-only pass before editing.
 
-Skip delegation when the task is a tiny targeted edit and the relevant file is already known.
+Complexity indicators that should push toward `$explore` even with a small file count:
+
+- A file is around 500+ lines, especially a service, controller, engine, workflow, or orchestration module.
+- One file mixes entry points, orchestration, permissions, data assembly, state transitions, or side effects.
+- The task requires tracing several symbols, branches, call chains, or side-effect paths inside a small set of files.
+- Misidentifying primary, legacy, experimental, generated, or unused code paths would create meaningful implementation risk.
+
+Skip delegation when the task is a tiny targeted edit and the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix.
 
 ## Workflow
 

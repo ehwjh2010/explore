@@ -1,8 +1,8 @@
 # Explore
 
-Explore is a Codex skill for delegating broad codebase reconnaissance to explorer subagents before the main agent reads or edits many files.
+Explore is a Codex skill for delegating complex codebase reconnaissance to explorer subagents before the main agent reads or edits many files or high-density code paths.
 
-It is useful when a coding task touches an unfamiliar repository, spans multiple areas, or likely requires reading many files. The skill asks subagents to return concise findings, a key-files table, and suggested next reads, so the main conversation stays focused on decisions and implementation.
+It is useful when a coding task touches an unfamiliar repository, spans multiple areas, likely requires reading many files, or depends on a small number of large, dense files. The skill asks subagents to return concise findings, a key-files table, and suggested next reads, so the main conversation stays focused on decisions and implementation.
 
 Codex supports independent subagents, so this skill treats explorer delegation as the default path for broad reconnaissance. The main agent should split the question, send read-only slices to explorer subagents, and synthesize their summaries before doing detailed local reads.
 
@@ -28,8 +28,10 @@ Use `$explore` when the work benefits from a reconnaissance pass before implemen
 - Tracing a feature across UI, API, state, data model, tests, and configuration.
 - Investigating a bug where several root-cause areas are plausible.
 - Planning a refactor, migration, review, or architecture change that may require many reads.
+- Inspecting a few large or high-density files where core workflow, service, controller, or engine logic is concentrated.
+- Tracing several symbols, branches, call chains, permissions, state transitions, or data assembly paths inside a small file set.
 
-Skip it for tiny targeted edits where the relevant file and change are already obvious.
+Skip it for tiny targeted edits where the relevant file and change are already obvious, such as a typo, one-line constant update, or simple style fix.
 
 ## Project Map
 
@@ -40,7 +42,7 @@ Skip it for tiny targeted edits where the relevant file and change are already o
 
 ## What It Enforces
 
-- Delegate large read-only code exploration to explorer subagents first.
+- Delegate complex read-only code exploration to explorer subagents first, based on reconnaissance complexity rather than file count alone.
 - Keep the main agent from reading the target codebase while subagents are exploring.
 - Require a key-files table before broad local reads or edits.
 - Ask explorers to distinguish primary, legacy, experimental, generated, unused, or unclear code paths when possible.
