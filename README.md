@@ -33,6 +33,8 @@ Use `$explore` when the work benefits from isolating high-noise code reading in 
 
 When choosing proactively, skip it for tiny targeted edits where the relevant file and change are already obvious, such as a typo, one-line constant update, or simple style fix. If the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
 
+When splitting explorer work, prefer business dimensions and risk hypotheses before broad technical buckets. For example, a backend-heavy workflow may need separate explorer slices for request routing, state transitions, permissions, persistence, side effects, and tests rather than one generic `backend` explorer.
+
 ## Project Map
 
 - `SKILL.md`: the runtime instructions for the Codex skill.
@@ -49,6 +51,7 @@ When choosing proactively, skip it for tiny targeted edits where the relevant fi
 - Group likely changes by concern, such as UI, API, state, data model, permissions, i18n, tests, or configuration.
 - Ask explorers for concise summaries and evidence paths, not large file dumps.
 - Split explorer work into clear, complementary slices rather than repeating the same question.
+- Refine coarse layers like `backend`, `service layer`, or `business logic` into smaller business or risk slices when they contain multiple rules, workflows, side effects, or state paths.
 
 ## Expected Output
 

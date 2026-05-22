@@ -30,7 +30,7 @@ When choosing whether to invoke this skill proactively, skip it for a tiny targe
 ## Workflow
 
 1. State briefly that you are using explorer subagents for the reconnaissance pass.
-2. Identify independent research slices. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
+2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
 3. Spawn explorer subagents by default. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
 4. While subagents run, do not read code from the target codebase in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
 5. Collect the explorer outputs and synthesize the result before reading large files yourself.
@@ -72,23 +72,37 @@ Key files table columns:
 
 ## Slicing Guidance
 
+Prefer business-first slicing. Technical layers such as frontend, backend, service layer, or tests are useful starting points, but they are not always natural explorer boundaries. Do not treat `backend`, `service layer`, or `business logic` as a single explorer task when that area contains multiple business rules, state paths, side effects, or risk hypotheses.
+
 Split by natural boundaries:
 
-- Vertical feature path: frontend, API route, service layer, persistence, tests.
+- Vertical feature path: frontend, API route, service layer, persistence, tests, then split any dense layer further by business concern.
 - Layered architecture: UI, domain logic, data model, integration, build/runtime config.
 - Problem hypotheses: likely root cause areas, reproduction path, neighboring implementations.
 - Independent packages in a monorepo.
 - Dense single-path investigations: entry point, call chain, data flow, tests, historical implementation, and risk assumptions.
 
+For backend-heavy or workflow-heavy tasks, consider separate explorer slices for:
+
+- Request entry points, routing, and parameter validation.
+- Permissions, tenancy, ownership, visibility, or role constraints.
+- Business state machines, workflow transitions, lifecycle rules, or approval paths.
+- Domain services, orchestration, command handlers, or policy objects.
+- Data models, persistence, query behavior, migrations, and compatibility.
+- External integrations, webhooks, third-party APIs, and sync paths.
+- Background jobs, queues, schedulers, notifications, audit logs, and other side effects.
+- Tests, fixtures, factories, and regression coverage.
+
 For complex tasks, prefer multiple explorer subagents split by independent questions, layers, risk hypotheses, or code regions. For a single path or file that is large and dense, multiple explorers can still be useful when each checks a different perspective such as entry points, call graph, data flow, tests, historical implementations, or risk points.
 
-Avoid vague prompts such as "explore everything." A good explorer task has a scope, a question, and a requested output shape. Do not send multiple explorers to answer the same question over the same scope.
+Avoid vague prompts such as "explore everything" or "inspect all backend logic." A good explorer task has a scope, a question, and a requested output shape. Do not send multiple explorers to answer the same question over the same scope.
 
 Concrete slicing examples:
 
 - Authentication bug: split into `request entry points and middleware`, `session/token domain logic`, and `tests plus fixtures`. Ask each explorer to find active code paths, relevant symbols, and existing error handling conventions.
 - Data persistence refactor: split into `models and schema`, `repository/query layer`, `background jobs or integrations`, and `tests/migrations/config`. Ask each explorer to identify ownership boundaries and compatibility risks.
 - Frontend feature change: split into `route/page entry points`, `state/data fetching`, `component library patterns`, and `tests/storybook/docs` when those areas are independent.
+- Workflow or work-order change: do not send one `backend` explorer for everything. Split into `request path and controller behavior`, `workflow state transition rules`, `permissions and visibility constraints`, `persistence and query behavior`, `side effects such as jobs, notifications, audit, or integrations`, and `tests and fixtures` when those concerns are present and independent.
 
 ## Required Synthesis
 
