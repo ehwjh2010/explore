@@ -1,13 +1,15 @@
 ---
 name: explore
-description: Use when a coding task requires codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. A user invoking $explore is asking to delegate read-only reconnaissance to explorer subagents by default, keep high-noise code search out of the main conversation, prevent the main agent from reading code while subagents are exploring, and require a key-files table before the main agent proceeds with detailed code reading or edits.
+description: Use when a coding task requires codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. Skill applicability is the authorization signal: when a task matches these conditions, or when the user invokes $explore, treat that as an explicit request to delegate read-only reconnaissance to explorer subagents by default, keep high-noise code search out of the main conversation, prevent the main agent from reading code while subagents are exploring, and require a key-files table before the main agent proceeds with detailed code reading or edits.
 ---
 
 # Explore
 
 ## Core Rule
 
-When the user invokes `$explore`, treat that as a request to delegate codebase reconnaissance to explorer subagents by default. Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
+Skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, treat that as an explicit request to delegate codebase reconnaissance to explorer subagents by default. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
+
+Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
 
 Use this skill when any of these signals appear:
 
@@ -25,13 +27,13 @@ Complexity indicators that should push toward `$explore` even with a small file 
 - The task requires tracing several symbols, branches, call chains, or side-effect paths inside a small set of files.
 - Misidentifying primary, legacy, experimental, generated, or unused code paths would create meaningful implementation risk.
 
-When choosing whether to invoke this skill proactively, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
+When choosing whether this skill applies, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
 
 ## Workflow
 
-1. State briefly that you are using explorer subagents for the reconnaissance pass.
+1. State briefly that you are using the Explore workflow and explorer subagents for the reconnaissance pass.
 2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
-3. Spawn explorer subagents by default. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
+3. Spawn explorer subagents by default when this skill applies; the matching task is enough authorization. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `medium`; raise to `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
 4. While subagents run, do not read code from the target codebase in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
 5. Collect the explorer outputs and synthesize the result before reading large files yourself.
 6. Produce a key-files table, then use it as the reading map for the next step.
@@ -135,7 +137,7 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 
 If subagents are unavailable or the spawn tool rejects the request at runtime:
 
-- Say that the runtime cannot spawn explorer subagents for this pass.
+- Say that the runtime cannot spawn explorer subagents for this pass. If the rejection appears to require narrower explicit user wording, explain that runtime limitation without changing the skill rule that applicability is authorization.
 - Perform a local read-only reconnaissance pass using focused commands such as `rg --files`, `rg '<symbol-or-term>'`, and targeted file reads.
 - Keep local notes concise and still produce the required key-files table before broad implementation reads.
 - Do not present the fallback as equivalent to isolated subagent exploration; it does not provide separate context windows.

@@ -1,4 +1,4 @@
 interface:
   display_name: "Explore"
-  short_description: "Delegate codebase reconnaissance to explorer subagents"
-  default_prompt: "Use $explore to delegate explorer subagents to map this codebase before making changes."
+  short_description: "Delegate codebase reconnaissance to explorer subagents when Explore conditions apply"
+  default_prompt: "When a task meets Explore conditions, or when the user invokes $explore, treat that as authorization to delegate explorer subagents to map the codebase before making changes."

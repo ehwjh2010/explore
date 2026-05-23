@@ -4,7 +4,7 @@ Explore is a Codex skill for delegating codebase reconnaissance to explorer suba
 
 It is useful when a coding task touches an unfamiliar repository, spans multiple areas, likely requires reading many files, or depends on a small number of large, dense files. The skill asks subagents to return concise findings, a key-files table, and suggested next reads, so the main conversation stays focused on decisions and implementation.
 
-When the user invokes `$explore`, the skill treats that as a request to delegate read-only reconnaissance to explorer subagents by default. The main agent should split the question, send complementary read-only slices to explorer subagents, and synthesize their summaries before doing detailed local reads.
+Skill applicability is the authorization signal: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents by default. The main agent should split the question, send complementary read-only slices to explorer subagents, and synthesize their summaries before doing detailed local reads.
 
 ## Install
 
@@ -14,7 +14,7 @@ Clone this repository into your Codex skills directory:
 git clone https://github.com/oil-oil/codex-explore-skill.git ~/.codex/skills/explore
 ```
 
-Then invoke it with:
+Then use it by giving a task that meets the Explore conditions, or invoke it explicitly with:
 
 ```text
 Use $explore to delegate explorer subagents to map this codebase before making changes.
@@ -22,7 +22,7 @@ Use $explore to delegate explorer subagents to map this codebase before making c
 
 ## When To Use It
 
-Use `$explore` when the work benefits from isolating high-noise code reading in explorer subagents before implementation:
+Use Explore when the work benefits from isolating high-noise code reading in explorer subagents before implementation:
 
 - Understanding an unfamiliar repository or subsystem.
 - Tracing a feature across UI, API, state, data model, tests, and configuration.
@@ -31,7 +31,7 @@ Use `$explore` when the work benefits from isolating high-noise code reading in 
 - Inspecting a few large or high-density files where core workflow, service, controller, or engine logic is concentrated.
 - Tracing several symbols, branches, call chains, permissions, state transitions, or data assembly paths inside a small file set.
 
-When choosing proactively, skip it for tiny targeted edits where the relevant file and change are already obvious, such as a typo, one-line constant update, or simple style fix. If the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
+When choosing proactively, skip it for tiny targeted edits where the relevant file and change are already obvious, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
 
 When splitting explorer work, prefer business dimensions and risk hypotheses before broad technical buckets. For example, a backend-heavy workflow may need separate explorer slices for request routing, state transitions, permissions, persistence, side effects, and tests rather than one generic `backend` explorer.
 
@@ -44,7 +44,7 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 
 ## What It Enforces
 
-- Delegate read-only code exploration to explorer subagents by default, based on reconnaissance complexity rather than file count alone.
+- Delegate read-only code exploration to explorer subagents by default when the task meets the Explore conditions or the user invokes `$explore`, based on reconnaissance complexity rather than file count alone.
 - Keep the main agent from reading the target codebase while subagents are exploring.
 - Require a key-files table before broad local reads or edits.
 - Ask explorers to distinguish primary, legacy, experimental, generated, unused, or unclear code paths when possible.
@@ -74,9 +74,9 @@ See `examples/` for full prompt and synthesis examples.
 
 ## Runtime Notes
 
-This skill is designed to choose explorer subagent spawning by default. Whether subagents can actually be spawned is determined by the active Codex runtime and available tools.
+This skill is designed to choose explorer subagent spawning by default when it applies; no extra user phrase such as `subagents`, `delegate`, or `parallel agents` is required by the skill. Whether subagents can actually be spawned is determined by the active Codex runtime and available tools.
 
-Some guarantees remain runtime-dependent. Tool availability, permission enforcement, automatic routing, parallel scheduling details, and whether only summaries return to the main context are controlled by the agent platform, not by this repository alone. When the runtime cannot spawn explorer subagents or the tool rejects the request, the skill falls back to a local read-only reconnaissance pass and says so explicitly.
+Some guarantees remain runtime-dependent. Tool availability, permission enforcement, automatic routing, parallel scheduling details, and whether only summaries return to the main context are controlled by the agent platform, not by this repository alone. When the runtime cannot spawn explorer subagents or the tool rejects the request, the skill falls back to a local read-only reconnaissance pass and says so explicitly. If the runtime requires narrower explicit wording for spawn authorization, the agent should identify that as a runtime limitation and continue with the local fallback.
 
 ## License
 
