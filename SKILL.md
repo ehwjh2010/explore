@@ -1,13 +1,15 @@
 ---
 name: explore
-description: Use when a coding task requires codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. Skill applicability is the authorization signal: when a task matches these conditions, or when the user invokes $explore, treat that as an explicit request to delegate read-only reconnaissance to explorer subagents by default, keep high-noise code search out of the main conversation, prevent the main agent from reading code while subagents are exploring, and require a key-files table before the main agent proceeds with detailed code reading or edits.
+description: Use when a coding task requires codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. Skill applicability is the authorization signal: when a task matches these conditions, or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn read-only explorer subagents before the main agent reads target code or edits files; if subagents cannot be spawned, stop and report that Explore is blocked instead of doing local fallback reconnaissance.
 ---
 
 # Explore
 
 ## Core Rule
 
-Skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, treat that as an explicit request to delegate codebase reconnaissance to explorer subagents by default. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
+Skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, explorer subagent reconnaissance is mandatory. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
+
+There is no local reconnaissance fallback for Explore. If explorer subagents cannot be spawned, stop the Explore workflow and report that the task is blocked by subagent unavailability. Do not replace explorer work with local `rg`, file reads, or structure scans.
 
 Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
 
@@ -27,13 +29,13 @@ Complexity indicators that should push toward `$explore` even with a small file 
 - The task requires tracing several symbols, branches, call chains, or side-effect paths inside a small set of files.
 - Misidentifying primary, legacy, experimental, generated, or unused code paths would create meaningful implementation risk.
 
-When choosing whether this skill applies, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, still run a read-only reconnaissance pass unless the runtime cannot spawn subagents.
+When choosing whether this skill applies, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, subagent reconnaissance is required before the main agent reads target code or edits files.
 
 ## Workflow
 
 1. State briefly that you are using the Explore workflow and explorer subagents for the reconnaissance pass.
 2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
-3. Spawn explorer subagents by default when this skill applies; the matching task is enough authorization. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `medium`; raise to `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
+3. Spawn explorer subagents when this skill applies; the matching task is enough authorization and subagent reconnaissance is required. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `medium`; raise to `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
 4. While subagents run, do not read code from the target codebase in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
 5. Collect the explorer outputs and synthesize the result before reading large files yourself.
 6. Produce a key-files table, then use it as the reading map for the next step.
@@ -42,7 +44,7 @@ Default responsibility split:
 
 - Main agent: split the task, spawn explorers, wait for summaries, synthesize findings, and perform only the smallest necessary local verification before editing.
 - Explorer subagents: perform read-only search and file inspection within their assigned slice, identify active and inactive paths when possible, and return concise evidence-backed summaries.
-- Fallback local pass: only used when the runtime cannot spawn explorer subagents or the tool rejects the spawn request.
+- No fallback local pass: if explorer subagents cannot run, stop and report the blocker.
 
 ## Explorer Prompt Template
 
@@ -133,14 +135,14 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 - While explorer subagents are reading the target codebase, the main agent must not run local code searches, file reads, or structure scans against that same target.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
 
-## Fallback And Error Handling
+## Blocking And Error Handling
 
 If subagents are unavailable or the spawn tool rejects the request at runtime:
 
-- Say that the runtime cannot spawn explorer subagents for this pass. If the rejection appears to require narrower explicit user wording, explain that runtime limitation without changing the skill rule that applicability is authorization.
-- Perform a local read-only reconnaissance pass using focused commands such as `rg --files`, `rg '<symbol-or-term>'`, and targeted file reads.
-- Keep local notes concise and still produce the required key-files table before broad implementation reads.
-- Do not present the fallback as equivalent to isolated subagent exploration; it does not provide separate context windows.
+- Say that Explore is blocked because explorer subagents are mandatory for this skill and cannot be spawned in the active runtime.
+- If the rejection appears to require narrower explicit user wording, explain that runtime limitation without changing the skill rule that applicability is authorization.
+- Do not perform local read-only reconnaissance with `rg --files`, `rg '<symbol-or-term>'`, targeted file reads, or equivalent local codebase scanning.
+- Do not produce the required key-files table from local fallback notes.
 
 If an explorer returns empty or low-value results:
 
