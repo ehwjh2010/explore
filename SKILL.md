@@ -1,6 +1,17 @@
 ---
 name: explore
-description: Use when a coding task requires codebase reconnaissance before implementation, especially unfamiliar repositories, architecture questions, feature tracing, bug investigations, refactors, migrations, reviews, changes that may require reading roughly 10+ files, searching multiple independent areas, inspecting large or high-density files, tracing deep intra-file call chains, or reasoning about high-risk domain workflows. Skill applicability is the authorization signal: when a task matches these conditions, or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn read-only explorer subagents before the main agent reads target code or edits files; if subagents cannot be spawned, stop and report that Explore is blocked instead of doing local fallback reconnaissance.
+description: >-
+  Use when a coding task requires codebase reconnaissance before implementation,
+  especially unfamiliar repositories, architecture questions, feature tracing,
+  bug investigations, refactors, migrations, reviews, changes that may require
+  reading roughly 10+ files, searching multiple independent areas, inspecting
+  large or high-density files, tracing deep intra-file call chains, or reasoning
+  about high-risk domain workflows. Skill applicability is the authorization
+  signal: when a task matches these conditions, or when the user invokes
+  $explore, subagent reconnaissance is mandatory. Spawn read-only explorer
+  subagents before the main agent reads target code or edits files; if subagents
+  cannot be spawned, stop and report that Explore is blocked instead of doing
+  local fallback reconnaissance.
 ---
 
 # Explore
