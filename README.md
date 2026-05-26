@@ -4,7 +4,7 @@ Explore is a Codex skill for delegating codebase reconnaissance to explorer suba
 
 It is useful when a coding task touches an unfamiliar repository, spans multiple areas, likely requires reading many files, or depends on a small number of large, dense files. The skill asks subagents to return concise findings, a key-files table, and suggested next reads, so the main conversation stays focused on decisions and implementation.
 
-Skill applicability is the authorization signal for the main coordinator agent: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents. Subagent reconnaissance is mandatory before the main agent does detailed local reads or edits. The main agent should split the question, send complementary read-only slices to explorer subagents, and synthesize their summaries before doing detailed local reads.
+Skill applicability is the authorization signal for the main coordinator agent: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents. Subagent reconnaissance is mandatory before the main agent does detailed local reads or edits. The main agent should split the question, send complementary read-only slices to explorer subagents, wait for every spawned explorer to reach a terminal result, and only then synthesize their summaries before doing detailed local reads.
 
 There is no local fallback reconnaissance mode for the main coordinator agent. If explorer subagents cannot be spawned, Explore stops and reports the blocker instead of scanning the codebase locally. Explorer subagents spawned by Explore are different: they must not invoke Explore again and should search and read files directly.
 
@@ -47,7 +47,8 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 ## What It Enforces
 
 - Delegate read-only code exploration to explorer subagents when the task meets the Explore conditions or the user invokes `$explore`, based on reconnaissance complexity rather than file count alone.
-- Keep the main agent from reading the target codebase while subagents are exploring.
+- Keep the main agent from reading the target codebase while any rostered subagent is still exploring or has unknown status.
+- Require an all-subagents barrier: partial results from one explorer, a subset of explorers, a majority of explorers, or the most confident explorer are interim notes only and are not enough for the coordinator to start implementation.
 - Stop instead of using local fallback if explorer subagents cannot be spawned by the main coordinator agent.
 - Tell explorer subagents that they are already delegated workers, should not invoke Explore again, and should perform their assigned read-only local search and file inspection directly.
 - Require a key-files table before broad local reads or edits.
@@ -59,7 +60,7 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 
 ## Expected Output
 
-A completed reconnaissance pass should give the main agent a small reading map:
+A completed reconnaissance pass means every rostered explorer reached a terminal result: useful report, empty or low-value report, explicit failure, or explicit unavailability. Only then should the main agent create a small reading map:
 
 | File | Role | Read next? | Reason | Source |
 | --- | --- | --- | --- | --- |

@@ -10,9 +10,12 @@ description: >-
   signal for the main coordinator agent: when a task matches these conditions,
   or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn
   read-only explorer subagents before the main agent reads target code or edits
-  files; if subagents cannot be spawned, stop and report that Explore is blocked
-  instead of doing local fallback reconnaissance. Explorer subagents spawned by
-  this skill must not invoke Explore again or spawn further subagents.
+  files, then wait for every spawned explorer to reach a terminal result before
+  reading target code, synthesizing findings, or editing files. Partial explorer
+  results are not enough to proceed. If subagents cannot be spawned, stop and
+  report that Explore is blocked instead of doing local fallback reconnaissance.
+  Explorer subagents spawned by this skill must not invoke Explore again or
+  spawn further subagents.
 ---
 
 # Explore
@@ -24,6 +27,8 @@ Highest-priority role rule: if you are already an explorer subagent spawned by t
 For the main coordinator agent, skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, explorer subagent reconnaissance is mandatory. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
 
 There is no local reconnaissance fallback for the main coordinator agent. If explorer subagents cannot be spawned, stop the Explore workflow and report that the task is blocked by subagent unavailability. Do not replace explorer work with local `rg`, file reads, or structure scans.
+
+The coordinator must treat spawned explorers as an all-subagents barrier. Once a set of explorers has been launched, do not read target code, synthesize a final reading map, make implementation decisions, or edit files until every launched explorer has returned a terminal result: useful report, empty/low-value report, explicit failure, or explicit unavailability. A subset of completed explorers is only interim progress, not authorization to proceed.
 
 Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
 
@@ -53,10 +58,12 @@ Use this mode when you are the main agent deciding whether and how to run Explor
 
 1. State briefly that you are using the Explore workflow and explorer subagents for the reconnaissance pass.
 2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
-3. Spawn explorer subagents when this skill applies; the matching task is enough authorization and subagent reconnaissance is required. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
-4. While subagents run, do not read code from the target codebase in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
-5. Collect the explorer outputs and synthesize the result before reading large files yourself.
-6. Produce a key-files table, then use it as the reading map for the next step.
+3. Build an explicit explorer roster before dispatch: name each slice, its scope, and the question it must answer. This roster defines the completion barrier for the reconnaissance pass.
+4. Spawn explorer subagents when this skill applies; the matching task is enough authorization and subagent reconnaissance is required. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
+5. While any explorer in the roster is still running or has an unknown status, do not read code from the target codebase, synthesize final findings, choose implementation files, or edit files in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
+6. If some explorers finish earlier than others, record their outputs as interim notes only. Do not act on partial results unless every other rostered explorer has also reached a terminal result or has been explicitly marked unavailable/failed in the synthesis.
+7. After every rostered explorer reaches a terminal result, collect all explorer outputs and synthesize the result before reading large files yourself.
+8. Produce a key-files table, then use it as the reading map for the next step.
 
 ### Explorer Worker Mode
 
@@ -139,7 +146,7 @@ Concrete slicing examples:
 
 ## Required Synthesis
 
-After subagents finish, summarize the useful findings and include this table before making broad reads or edits:
+After every rostered subagent has reached a terminal result, summarize the useful findings and include this table before making broad reads or edits. The synthesis must mention any explorer that failed, returned low-value findings, or was unavailable, so the user can see that the coordinator did not proceed from only a partial subset.
 
 | File | Role | Read next? | Reason | Source |
 | --- | --- | --- | --- | --- |
@@ -161,7 +168,8 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 - Ask explorers for summaries and file references, not full file dumps.
 - Keep explorer prompts read-only and start them with the explorer subagent identity and no-recursion instructions from the template. Do not add restrictions beyond the read-only reconnaissance scope unless the task itself requires a narrower boundary.
 - Use parallel explorers only when the slices are independent.
-- While explorer subagents are reading the target codebase, the main agent must not run local code searches, file reads, or structure scans against that same target.
+- While any rostered explorer subagent is still running or has unknown status, the main agent must not run local code searches, file reads, or structure scans against that same target.
+- Do not treat the first useful explorer report, a majority of explorer reports, or the highest-confidence explorer report as sufficient to continue. The barrier is every rostered explorer reaching a terminal result.
 - Explorer worker subagents may run local code searches, file reads, and structure scans inside their assigned read-only scope.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
 
@@ -181,6 +189,12 @@ If an explorer returns empty or low-value results:
 - Check whether the prompt was too narrow, used the wrong terminology, or scoped the wrong directory.
 - Retry once with a broader but still bounded scope, adding concrete search terms, likely file patterns, or neighboring modules.
 - If the second pass is still empty, mark the area as `unclear` in the synthesis and verify the smallest plausible local path before editing.
+
+If one or more explorers are still pending while others have finished:
+
+- Wait for the pending explorers before synthesizing final findings or reading target code locally.
+- If the runtime reports a pending explorer as failed, cancelled, unavailable, or unreachable, include that terminal status in the synthesis and mark its area as `unclear`.
+- Do not replace a pending explorer with coordinator-local reconnaissance. If the area is still necessary, spawn a bounded replacement explorer when the runtime allows it; otherwise report that Explore is blocked or partially blocked for that slice.
 
 If explorer findings conflict:
 
