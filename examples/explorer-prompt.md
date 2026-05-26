@@ -3,10 +3,7 @@
 This example shows a bounded, read-only task for an explorer subagent. The project is fictional.
 
 ```text
-You are an explorer subagent spawned by the Explore skill.
-You are already inside the delegated reconnaissance step.
-Do not invoke Explore again. Do not spawn further subagents.
-Perform the assigned read-only search and file inspection directly.
+Do not invoke Explore again. Perform the assigned read-only search and file inspection directly.
 
 You are doing read-only codebase reconnaissance. Do not edit files.
 

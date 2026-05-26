@@ -6,7 +6,7 @@ It is useful when a coding task touches an unfamiliar repository, spans multiple
 
 Skill applicability is the authorization signal for the main coordinator agent: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents. Subagent reconnaissance is mandatory before the main agent does detailed local reads or edits. The main agent should split the question, send complementary read-only slices to explorer subagents, and synthesize their summaries before doing detailed local reads.
 
-There is no local fallback reconnaissance mode for the main coordinator agent. If explorer subagents cannot be spawned, Explore stops and reports the blocker instead of scanning the codebase locally. Explorer subagents spawned by Explore are different: they are already inside the delegated reconnaissance step, so they search and read files directly and must not invoke Explore again or spawn further subagents.
+There is no local fallback reconnaissance mode for the main coordinator agent. If explorer subagents cannot be spawned, Explore stops and reports the blocker instead of scanning the codebase locally. Explorer subagents spawned by Explore are different: they must not invoke Explore again and should search and read files directly.
 
 ## Install
 

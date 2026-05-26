@@ -19,7 +19,7 @@ description: >-
 
 ## Core Rule
 
-Highest-priority role rule: if you are already an explorer subagent spawned by the Explore skill, do not trigger this workflow again and do not spawn further subagents. You are already inside the delegated reconnaissance step; perform the assigned read-only search and file inspection directly, then return your concise report.
+Highest-priority role rule: if you are already an explorer subagent spawned by the Explore skill, do not invoke Explore again. Perform the assigned read-only search and file inspection directly, then return your concise report.
 
 For the main coordinator agent, skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, explorer subagent reconnaissance is mandatory. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
 
@@ -62,7 +62,7 @@ Use this mode when you are the main agent deciding whether and how to run Explor
 
 Use this mode when the prompt says you are an explorer subagent spawned by the Explore skill.
 
-1. Do not invoke Explore again and do not spawn further subagents.
+1. Do not invoke Explore again. Perform the assigned read-only search and file inspection directly.
 2. Treat local `rg`, file reads, directory inspection, and similar read-only codebase scanning as your normal assigned work, not as fallback.
 3. Stay within the assigned goal and scope unless a small neighboring read is necessary to avoid a misleading report.
 4. Return concise evidence-backed findings, a key-files table, and suggested next reads. Do not edit files.
@@ -78,10 +78,7 @@ Default responsibility split:
 Use this structure for each explorer subagent:
 
 ```text
-You are an explorer subagent spawned by the Explore skill.
-You are already inside the delegated reconnaissance step.
-Do not invoke Explore again. Do not spawn further subagents.
-Perform the assigned read-only search and file inspection directly.
+Do not invoke Explore again. Perform the assigned read-only search and file inspection directly.
 
 You are doing read-only codebase reconnaissance. Do not edit files.
 
