@@ -7,20 +7,23 @@ description: >-
   reading roughly 10+ files, searching multiple independent areas, inspecting
   large or high-density files, tracing deep intra-file call chains, or reasoning
   about high-risk domain workflows. Skill applicability is the authorization
-  signal: when a task matches these conditions, or when the user invokes
-  $explore, subagent reconnaissance is mandatory. Spawn read-only explorer
-  subagents before the main agent reads target code or edits files; if subagents
-  cannot be spawned, stop and report that Explore is blocked instead of doing
-  local fallback reconnaissance.
+  signal for the main coordinator agent: when a task matches these conditions,
+  or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn
+  read-only explorer subagents before the main agent reads target code or edits
+  files; if subagents cannot be spawned, stop and report that Explore is blocked
+  instead of doing local fallback reconnaissance. Explorer subagents spawned by
+  this skill must not invoke Explore again or spawn further subagents.
 ---
 
 # Explore
 
 ## Core Rule
 
-Skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, explorer subagent reconnaissance is mandatory. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
+Highest-priority role rule: if you are already an explorer subagent spawned by the Explore skill, do not trigger this workflow again and do not spawn further subagents. You are already inside the delegated reconnaissance step; perform the assigned read-only search and file inspection directly, then return your concise report.
 
-There is no local reconnaissance fallback for Explore. If explorer subagents cannot be spawned, stop the Explore workflow and report that the task is blocked by subagent unavailability. Do not replace explorer work with local `rg`, file reads, or structure scans.
+For the main coordinator agent, skill applicability is the authorization signal. When the task matches this skill's applicability conditions, or when the user invokes `$explore`, explorer subagent reconnaissance is mandatory. The user does not need to also say `subagents`, `delegate`, `parallel agents`, or any other authorization phrase.
+
+There is no local reconnaissance fallback for the main coordinator agent. If explorer subagents cannot be spawned, stop the Explore workflow and report that the task is blocked by subagent unavailability. Do not replace explorer work with local `rg`, file reads, or structure scans.
 
 Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
 
@@ -40,9 +43,13 @@ Complexity indicators that should push toward `$explore` even with a small file 
 - The task requires tracing several symbols, branches, call chains, or side-effect paths inside a small set of files.
 - Misidentifying primary, legacy, experimental, generated, or unused code paths would create meaningful implementation risk.
 
-When choosing whether this skill applies, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, subagent reconnaissance is required before the main agent reads target code or edits files.
+When choosing whether this skill applies, skip it for a tiny targeted edit where the relevant file and change are already known, such as a typo, one-line constant update, or simple style fix. If the task meets the Explore conditions or the user explicitly invokes `$explore`, subagent reconnaissance is required before the main coordinator agent reads target code or edits files.
 
 ## Workflow
+
+### Coordinator Mode
+
+Use this mode when you are the main agent deciding whether and how to run Explore.
 
 1. State briefly that you are using the Explore workflow and explorer subagents for the reconnaissance pass.
 2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
@@ -51,17 +58,31 @@ When choosing whether this skill applies, skip it for a tiny targeted edit where
 5. Collect the explorer outputs and synthesize the result before reading large files yourself.
 6. Produce a key-files table, then use it as the reading map for the next step.
 
+### Explorer Worker Mode
+
+Use this mode when the prompt says you are an explorer subagent spawned by the Explore skill.
+
+1. Do not invoke Explore again and do not spawn further subagents.
+2. Treat local `rg`, file reads, directory inspection, and similar read-only codebase scanning as your normal assigned work, not as fallback.
+3. Stay within the assigned goal and scope unless a small neighboring read is necessary to avoid a misleading report.
+4. Return concise evidence-backed findings, a key-files table, and suggested next reads. Do not edit files.
+
 Default responsibility split:
 
-- Main agent: split the task, spawn explorers, wait for summaries, synthesize findings, and perform only the smallest necessary local verification before editing.
-- Explorer subagents: perform read-only search and file inspection within their assigned slice, identify active and inactive paths when possible, and return concise evidence-backed summaries.
-- No fallback local pass: if explorer subagents cannot run, stop and report the blocker.
+- Main coordinator agent: split the task, spawn explorers, wait for summaries, synthesize findings, and perform only the smallest necessary local verification before editing.
+- Explorer worker subagents: perform direct read-only search and file inspection within their assigned slice, identify active and inactive paths when possible, and return concise evidence-backed summaries. This direct local exploration is their delegated job, not a fallback.
+- No coordinator fallback local pass: if explorer subagents cannot run, stop and report the blocker.
 
 ## Explorer Prompt Template
 
 Use this structure for each explorer subagent:
 
 ```text
+You are an explorer subagent spawned by the Explore skill.
+You are already inside the delegated reconnaissance step.
+Do not invoke Explore again. Do not spawn further subagents.
+Perform the assigned read-only search and file inspection directly.
+
 You are doing read-only codebase reconnaissance. Do not edit files.
 
 Goal: <specific research question>
@@ -141,19 +162,22 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 
 - Treat explorer work as reconnaissance, not implementation.
 - Ask explorers for summaries and file references, not full file dumps.
-- Keep explorer prompts read-only. Do not add restrictions beyond the read-only reconnaissance scope unless the task itself requires a narrower boundary.
+- Keep explorer prompts read-only and start them with the explorer subagent identity and no-recursion instructions from the template. Do not add restrictions beyond the read-only reconnaissance scope unless the task itself requires a narrower boundary.
 - Use parallel explorers only when the slices are independent.
 - While explorer subagents are reading the target codebase, the main agent must not run local code searches, file reads, or structure scans against that same target.
+- Explorer worker subagents may run local code searches, file reads, and structure scans inside their assigned read-only scope.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
 
 ## Blocking And Error Handling
 
-If subagents are unavailable or the spawn tool rejects the request at runtime:
+If you are the main coordinator agent and subagents are unavailable or the spawn tool rejects the request at runtime:
 
 - Say that Explore is blocked because explorer subagents are mandatory for this skill and cannot be spawned in the active runtime.
 - If the rejection appears to require narrower explicit user wording, explain that runtime limitation without changing the skill rule that applicability is authorization.
 - Do not perform local read-only reconnaissance with `rg --files`, `rg '<symbol-or-term>'`, targeted file reads, or equivalent local codebase scanning.
 - Do not produce the required key-files table from local fallback notes.
+
+If you are an explorer worker subagent, lack of a spawn tool is not a blocker. Do not try to delegate; complete the assigned read-only reconnaissance directly and report any inaccessible paths or missing context as findings.
 
 If an explorer returns empty or low-value results:
 
