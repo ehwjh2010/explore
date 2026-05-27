@@ -10,10 +10,13 @@ description: >-
   signal for the main coordinator agent: when a task matches these conditions,
   or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn
   read-only explorer subagents before the main agent reads target code or edits
-  files, then wait for every spawned explorer to reach a terminal result before
-  reading target code, synthesizing findings, or editing files. Partial explorer
-  results are not enough to proceed. If subagents cannot be spawned, stop and
-  report that Explore is blocked instead of doing local fallback reconnaissance.
+  files. Wait for every spawned explorer to reach a terminal result, then
+  explicitly close or terminate each spawned explorer through the active
+  runtime's available mechanism before proceeding. A terminal result means the
+  explorer reported a useful, empty/low-value, failed, or unavailable outcome;
+  it does not mean the subagent lifecycle has been cleaned up. Partial explorer
+  results or unrecorded cleanup statuses are not enough to proceed. If subagents cannot be spawned,
+  stop and report that Explore is blocked instead of doing local fallback reconnaissance.
   Explorer subagents spawned by this skill must not invoke Explore again or
   spawn further subagents.
 ---
@@ -28,7 +31,9 @@ For the main coordinator agent, skill applicability is the authorization signal.
 
 There is no local reconnaissance fallback for the main coordinator agent. If explorer subagents cannot be spawned, stop the Explore workflow and report that the task is blocked by subagent unavailability. Do not replace explorer work with local `rg`, file reads, or structure scans.
 
-The coordinator must treat spawned explorers as an all-subagents barrier. Once a set of explorers has been launched, do not read target code, synthesize a final reading map, make implementation decisions, or edit files until every launched explorer has returned a terminal result: useful report, empty/low-value report, explicit failure, or explicit unavailability. A subset of completed explorers is only interim progress, not authorization to proceed.
+The coordinator must treat spawned explorers as an all-subagents barrier. Once a set of explorers has been launched, do not read target code, synthesize a final reading map, make implementation decisions, or edit files until every launched explorer has returned a terminal result: useful report, empty/low-value report, explicit failure, or explicit unavailability. A terminal result only means the explorer has completed its report; it does not mean the spawned subagent has been closed or terminated. A subset of completed explorers is only interim progress, not authorization to proceed.
+
+After every launched explorer reaches a terminal result, the coordinator must explicitly clean up the spawned subagents before synthesis, local target-code reads, implementation decisions, or edits. Use the current runtime's supported close, terminate, or equivalent operation for each started explorer. Record a cleanup status for each explorer: `closed`, `close failed`, or `close unavailable`. If cleanup fails, retry once when the runtime supports retrying. If cleanup remains failed, keep the returned reconnaissance result but report the close failure and the possible runtime resource risk in the synthesis. If the runtime has no close or terminate API, record and report `close unavailable` instead of implying the subagent was closed.
 
 Keep the main context focused on coordination, decisions, implementation, and verification; let explorer subagents absorb verbose search results and file reads.
 
@@ -60,10 +65,12 @@ Use this mode when you are the main agent deciding whether and how to run Explor
 2. Identify independent research slices. Start with business dimensions, risk hypotheses, state paths, permission boundaries, and side effects; use technical layers as supporting boundaries. Let the number of explorer subagents follow the useful, non-overlapping slices; do not impose a fixed count.
 3. Build an explicit explorer roster before dispatch: name each slice, its scope, and the question it must answer. This roster defines the completion barrier for the reconnaissance pass.
 4. Spawn explorer subagents when this skill applies; the matching task is enough authorization and subagent reconnaissance is required. Give each subagent a clear, complementary, read-only task. Default explorer reasoning effort to `low`; raise to `medium` or `high` only when the task is architecturally complex, ambiguous, high-risk, or has multiple similar code paths that are easy to confuse.
-5. While any explorer in the roster is still running or has an unknown status, do not read code from the target codebase, synthesize final findings, choose implementation files, or edit files in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
+5. While any explorer in the roster is still running, pending, or has an unknown status, do not read code from the target codebase, synthesize final findings, choose implementation files, or edit files in the main conversation. Only coordinate, wait, or work on unrelated non-codebase tasks.
 6. If some explorers finish earlier than others, record their outputs as interim notes only. Do not act on partial results unless every other rostered explorer has also reached a terminal result or has been explicitly marked unavailable/failed in the synthesis.
-7. After every rostered explorer reaches a terminal result, collect all explorer outputs and synthesize the result before reading large files yourself.
-8. Produce a key-files table, then use it as the reading map for the next step.
+7. After every rostered explorer reaches a terminal result, collect each explorer's output and terminal status: `useful`, `empty/low-value`, `failure`, or `unavailable`.
+8. For each started explorer, run the active runtime's supported close, terminate, or equivalent cleanup operation. Record each cleanup status as `closed`, `close failed`, or `close unavailable`. Retry a failed close once when the runtime supports retrying.
+9. Only after the terminal-result barrier and cleanup recording are complete, synthesize the result before reading large files yourself.
+10. Produce a key-files table, then use it as the reading map for the next step.
 
 ### Explorer Worker Mode
 
@@ -146,7 +153,7 @@ Concrete slicing examples:
 
 ## Required Synthesis
 
-After every rostered subagent has reached a terminal result, summarize the useful findings and include this table before making broad reads or edits. The synthesis must mention any explorer that failed, returned low-value findings, or was unavailable, so the user can see that the coordinator did not proceed from only a partial subset.
+After every rostered subagent has reached a terminal result and the coordinator has recorded cleanup status for each started explorer, summarize the useful findings and include this table before making broad reads or edits. The synthesis must mention any explorer that failed, returned low-value findings, was unavailable, had cleanup unavailable, or could not be closed, so the user can see that the coordinator did not proceed from only a partial subset or hide subagent lifecycle risk.
 
 | File | Role | Read next? | Reason | Source |
 | --- | --- | --- | --- | --- |
@@ -168,8 +175,11 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 - Ask explorers for summaries and file references, not full file dumps.
 - Keep explorer prompts read-only and start them with the explorer subagent identity and no-recursion instructions from the template. Do not add restrictions beyond the read-only reconnaissance scope unless the task itself requires a narrower boundary.
 - Use parallel explorers only when the slices are independent.
-- While any rostered explorer subagent is still running or has unknown status, the main agent must not run local code searches, file reads, or structure scans against that same target.
+- While any rostered explorer subagent is still running, pending, or has unknown status, the main agent must not run local code searches, file reads, or structure scans against that same target.
 - Do not treat the first useful explorer report, a majority of explorer reports, or the highest-confidence explorer report as sufficient to continue. The barrier is every rostered explorer reaching a terminal result.
+- Do not treat a terminal result as lifecycle cleanup. Before synthesis, target-code reads, implementation decisions, or edits, the main agent must close or terminate each started explorer through the active runtime's available mechanism, or record and report `close failed` or `close unavailable`.
+- If an explorer reached a terminal result but cleanup failed after the supported retry, the main agent may synthesize from that explorer's returned result, but must explicitly report the close failure and possible runtime resource risk.
+- If an explorer has not reached a terminal result, cleanup failure or cleanup unavailability cannot bypass the all-subagents barrier.
 - Explorer worker subagents may run local code searches, file reads, and structure scans inside their assigned read-only scope.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
 
@@ -195,6 +205,14 @@ If one or more explorers are still pending while others have finished:
 - Wait for the pending explorers before synthesizing final findings or reading target code locally.
 - If the runtime reports a pending explorer as failed, cancelled, unavailable, or unreachable, include that terminal status in the synthesis and mark its area as `unclear`.
 - Do not replace a pending explorer with coordinator-local reconnaissance. If the area is still necessary, spawn a bounded replacement explorer when the runtime allows it; otherwise report that Explore is blocked or partially blocked for that slice.
+
+If one or more explorers reached a terminal result but cleanup fails:
+
+- Retry the close, terminate, or equivalent cleanup operation once when the runtime supports retrying.
+- If the retry succeeds, record the explorer cleanup status as `closed`.
+- If the retry fails, record `close failed`, keep the explorer's returned findings, continue synthesis only after all rostered explorers have terminal results, and report the close failure plus possible runtime resource risk.
+- If the runtime has no close or terminate API, record `close unavailable` and report cleanup unavailability rather than claiming the explorer was closed.
+- Do not use close failure, close unavailability, or an attempted termination as a substitute for a missing terminal result from a running, pending, or unknown-status explorer.
 
 If explorer findings conflict:
 

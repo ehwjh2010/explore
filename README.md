@@ -4,7 +4,7 @@ Explore is a Codex skill for delegating codebase reconnaissance to explorer suba
 
 It is useful when a coding task touches an unfamiliar repository, spans multiple areas, likely requires reading many files, or depends on a small number of large, dense files. The skill asks subagents to return concise findings, a key-files table, and suggested next reads, so the main conversation stays focused on decisions and implementation.
 
-Skill applicability is the authorization signal for the main coordinator agent: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents. Subagent reconnaissance is mandatory before the main agent does detailed local reads or edits. The main agent should split the question, send complementary read-only slices to explorer subagents, wait for every spawned explorer to reach a terminal result, and only then synthesize their summaries before doing detailed local reads.
+Skill applicability is the authorization signal for the main coordinator agent: when a task meets the Explore conditions, or when the user invokes `$explore`, the skill treats that as an explicit request to delegate read-only reconnaissance to explorer subagents. Subagent reconnaissance is mandatory before the main agent does detailed local reads or edits. The main agent should split the question, send complementary read-only slices to explorer subagents, wait for every spawned explorer to reach a terminal result, explicitly close or terminate each spawned explorer through the active runtime's available mechanism, record cleanup status, and only then synthesize their summaries before doing detailed local reads.
 
 There is no local fallback reconnaissance mode for the main coordinator agent. If explorer subagents cannot be spawned, Explore stops and reports the blocker instead of scanning the codebase locally. Explorer subagents spawned by Explore are different: they must not invoke Explore again and should search and read files directly.
 
@@ -47,8 +47,11 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 ## What It Enforces
 
 - Delegate read-only code exploration to explorer subagents when the task meets the Explore conditions or the user invokes `$explore`, based on reconnaissance complexity rather than file count alone.
-- Keep the main agent from reading the target codebase while any rostered subagent is still exploring or has unknown status.
+- Keep the main agent from reading the target codebase while any rostered subagent is still running, pending, exploring, or has unknown status.
 - Require an all-subagents barrier: partial results from one explorer, a subset of explorers, a majority of explorers, or the most confident explorer are interim notes only and are not enough for the coordinator to start implementation.
+- Treat a terminal result as report completion, not subagent lifecycle cleanup.
+- Require explicit cleanup of each spawned explorer before synthesis, broad local reads, or edits; record each cleanup status as `closed`, `close failed`, or `close unavailable`.
+- Allow synthesis after a terminal-result explorer cannot be closed only when the close failure or unavailable close mechanism is explicitly reported as a runtime resource risk.
 - Stop instead of using local fallback if explorer subagents cannot be spawned by the main coordinator agent.
 - Tell explorer subagents that they are already delegated workers, should not invoke Explore again, and should perform their assigned read-only local search and file inspection directly.
 - Require a key-files table before broad local reads or edits.
@@ -60,7 +63,7 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 
 ## Expected Output
 
-A completed reconnaissance pass means every rostered explorer reached a terminal result: useful report, empty or low-value report, explicit failure, or explicit unavailability. Only then should the main agent create a small reading map:
+A completed reconnaissance pass means every rostered explorer reached a terminal result: useful report, empty or low-value report, explicit failure, or explicit unavailability. It also means the coordinator has recorded cleanup status for every spawned explorer: `closed`, `close failed`, or `close unavailable`. Only after both the terminal-result barrier and cleanup recording should the main agent create a small reading map:
 
 | File | Role | Read next? | Reason | Source |
 | --- | --- | --- | --- | --- |
@@ -79,9 +82,9 @@ See `examples/` for full prompt and synthesis examples.
 
 ## Runtime Notes
 
-This skill requires explorer subagent spawning when it applies to the main coordinator agent; no extra user phrase such as `subagents`, `delegate`, or `parallel agents` is required by the skill. Whether subagents can actually be spawned is determined by the active Codex runtime and available tools.
+This skill requires explorer subagent spawning when it applies to the main coordinator agent; no extra user phrase such as `subagents`, `delegate`, or `parallel agents` is required by the skill. Whether subagents can actually be spawned and explicitly closed is determined by the active Codex runtime and available tools.
 
-Some guarantees remain runtime-dependent. Tool availability, permission enforcement, automatic routing, parallel scheduling details, and whether only summaries return to the main context are controlled by the agent platform, not by this repository alone. When the coordinator runtime cannot spawn explorer subagents or the tool rejects the request, the skill stops and says Explore is blocked. If the runtime requires narrower explicit wording for spawn authorization, the agent should identify that as a runtime limitation and ask the user to re-authorize with the wording required by that runtime. An explorer subagent should not treat inability to spawn another agent as blocked; it should complete its own assigned read-only reconnaissance directly.
+Some guarantees remain runtime-dependent. Tool availability, permission enforcement, automatic routing, parallel scheduling details, close or terminate APIs, and whether only summaries return to the main context are controlled by the agent platform, not by this repository alone. When the coordinator runtime cannot spawn explorer subagents or the tool rejects the request, the skill stops and says Explore is blocked. After spawned explorers return terminal results, the coordinator must use any runtime-supported close, terminate, or equivalent mechanism and record whether each explorer was closed, failed to close, or could not be closed because cleanup is unavailable. If cleanup fails, the coordinator retries once when supported and reports any remaining failure instead of implying automatic lifecycle handling. If the runtime requires narrower explicit wording for spawn authorization, the agent should identify that as a runtime limitation and ask the user to re-authorize with the wording required by that runtime. An explorer subagent should not treat inability to spawn another agent as blocked; it should complete its own assigned read-only reconnaissance directly.
 
 ## License
 

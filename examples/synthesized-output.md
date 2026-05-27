@@ -4,11 +4,13 @@ This example shows how the main agent can combine explorer findings before broad
 
 ## Findings
 
-All rostered explorer subagents have reached terminal results. The auth-path explorer and tests explorer returned useful findings; the legacy-path explorer returned no active usage beyond migration tests.
+All rostered explorer subagents reached terminal results and were closed. The auth-path explorer and tests explorer returned useful findings; the legacy-path explorer returned no active usage beyond migration tests.
 
 The active password-login path appears to be `src/routes/login.ts -> src/auth/password.ts -> src/auth/session.ts`. An older implementation under `src/legacy/auth.ts` is imported only by migration tests and should not be changed for the requested behavior.
 
 The main risk is preserving the existing error response shape while changing session expiration logic. The current tests cover invalid passwords, but not expiration edge cases.
+
+If a close operation had failed after retry, this synthesis would keep the returned findings but report the cleanup status explicitly, for example: `tests explorer returned useful findings, but close failed and may leave runtime resources occupied`.
 
 ## Key Files
 
