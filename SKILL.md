@@ -1,24 +1,15 @@
 ---
 name: explore
 description: >-
-  Use when a coding task requires codebase reconnaissance before implementation,
-  especially unfamiliar repositories, architecture questions, feature tracing,
-  bug investigations, refactors, migrations, reviews, changes that may require
-  reading roughly 10+ files, searching multiple independent areas, inspecting
-  large or high-density files, tracing deep intra-file call chains, or reasoning
-  about high-risk domain workflows. Skill applicability is the authorization
-  signal for the main coordinator agent: when a task matches these conditions,
-  or when the user invokes $explore, subagent reconnaissance is mandatory. Spawn
-  read-only explorer subagents before the main agent reads target code or edits
-  files. Wait for every spawned explorer to reach a terminal result, then
-  explicitly close or terminate each spawned explorer through the active
-  runtime's available mechanism before proceeding. A terminal result means the
-  explorer reported a useful, empty/low-value, failed, or unavailable outcome;
-  it does not mean the subagent lifecycle has been cleaned up. Partial explorer
-  results or unrecorded cleanup statuses are not enough to proceed. If subagents cannot be spawned,
-  stop and report that Explore is blocked instead of doing local fallback reconnaissance.
-  Explorer subagents spawned by this skill must not invoke Explore again or
-  spawn further subagents.
+  Use when a coding task requires broad read-only codebase reconnaissance before
+  implementation, including unfamiliar repositories, architecture questions,
+  feature tracing, bug investigations, refactors, migrations, reviews,
+  multi-area changes, large or dense files, deep call chains, or high-risk
+  domain workflows. When this skill applies or the user invokes $explore, the
+  coordinator must spawn read-only explorer subagents before reading target code
+  or editing files, wait for every explorer terminal result, explicitly clean up
+  started subagents when supported, and report blockage if subagents cannot be
+  spawned. Explorer subagents must not invoke Explore again or spawn subagents.
 ---
 
 # Explore
