@@ -69,8 +69,13 @@ Use this mode when the prompt says you are an explorer subagent spawned by the E
 
 1. Do not invoke Explore again. Perform the assigned read-only search and file inspection directly.
 2. Treat local `rg`, file reads, directory inspection, and similar read-only codebase scanning as your normal assigned work, not as fallback.
-3. Stay within the assigned goal and scope unless a small neighboring read is necessary to avoid a misleading report.
-4. Return concise evidence-backed findings, a key-files table, and suggested next reads. Do not edit files.
+3. Start broad-to-narrow inside the assigned scope: first identify relevant directories, entry points, naming patterns, configs, tests, docs, and other clues, then narrow to the key files and symbols that explain the path.
+4. Combine search methods when available and useful: filename search, text search, structural or AST search, reference or LSP search, config/test/doc search, and history search. These are guidance for better judgment, not mandatory tool dependencies.
+5. Match reconnaissance scope to explorer reasoning effort. With `low`, identify entry points, key files, the main path evidence, and obvious tests or configs. With `medium` or `high`, also trace references, analogous implementations, structural matches, history clues, and competing paths.
+6. When evidence is sufficient, include the active path or control/data flow in `Findings` as a line or short list, such as `route -> service -> repository -> test`. If it cannot be confirmed, write `unclear` and name the missing evidence.
+7. Look for nearby analogous implementations and local patterns in naming, error handling, permissions, configuration, and tests. Report the pattern the main agent should preserve, or write `No analogous implementation found in assigned scope` when none is found.
+8. Stay within the assigned goal and scope unless a small neighboring read is necessary to avoid a misleading report.
+9. Return concise evidence-backed findings, a key-files table, and suggested next reads. Do not edit files.
 
 Default responsibility split:
 
@@ -92,9 +97,11 @@ Scope: <directories, modules, packages, feature names, or search terms>
 
 Find:
 - The most relevant files and symbols.
+- The broad-to-narrow search path used inside the assigned scope.
 - How the pieces fit together.
+- The active control/data path, such as `route -> service -> repository -> test`, or `unclear` with the missing evidence.
 - Which code paths are active, primary, legacy, experimental, or unused when that can be inferred.
-- Existing patterns the main agent should preserve.
+- Nearby analogous implementations and local patterns the main agent should preserve.
 - Tests, fixtures, configs, or docs that matter.
 - How likely changes should be grouped by concern, such as UI, API, state, data model, background jobs, permissions, i18n, styling, tests, or configuration.
 - Risks, unclear areas, and follow-up reads.
@@ -172,6 +179,7 @@ When multiple similar implementations exist, explicitly label each as `primary`,
 - If an explorer reached a terminal result but cleanup failed after the supported retry, the main agent may synthesize from that explorer's returned result, but must explicitly report the close failure and possible runtime resource risk.
 - If an explorer has not reached a terminal result, cleanup failure or cleanup unavailability cannot bypass the all-subagents barrier.
 - Explorer worker subagents may run local code searches, file reads, and structure scans inside their assigned read-only scope.
+- Explorer worker search-method guidance does not authorize coordinator-local reconnaissance or fallback. It applies only to spawned explorer workers inside their assigned read-only scope.
 - Do not bake one investigation's project-specific findings into this skill. Capture reusable rules and output shapes only.
 
 ## Blocking And Error Handling

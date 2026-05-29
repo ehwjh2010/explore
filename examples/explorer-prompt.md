@@ -15,9 +15,11 @@ Scope:
 
 Find:
 - The most relevant files and symbols.
+- The broad-to-narrow search path used inside the assigned scope.
 - How the login request reaches session creation.
+- The active control/data path from route to session persistence, or `unclear` with the missing evidence.
 - Which code paths are active, primary, legacy, experimental, or unused when that can be inferred.
-- Existing patterns the main agent should preserve.
+- Nearby analogous implementations and local patterns the main agent should preserve.
 - Tests, fixtures, configs, or docs that matter.
 - Risks, unclear areas, and follow-up reads.
 
