@@ -41,7 +41,7 @@ When splitting explorer work, prefer business dimensions and risk hypotheses bef
 
 - `SKILL.md`: the runtime instructions for the Codex skill.
 - `agents/openai.yaml`: minimal OpenAI agent metadata. Keep this conservative unless the supported schema is confirmed.
-- `references/`: background research and design notes.
+- `references/`: progressive workflow instructions, background research, and design notes.
 - `examples/`: sample explorer prompts and synthesized outputs.
 
 ## What It Enforces
